@@ -6,6 +6,7 @@ import {
   Input,
   Modal,
   Popconfirm,
+  Radio,
   Row,
   Table,
   Tabs,
@@ -28,9 +29,15 @@ import {
   foundaryId,
   getProposalStatus,
   liquidifyCanisterId,
+  liquidifyStagingCanisterId,
+  MYORDINALS,
   myordinalsCanisterId,
   principals,
+  PRODUCTION,
+  ROOTSTOCK,
+  rootstockCanisterId,
   sliceAddress,
+  STAGING,
 } from "../utils";
 
 const Cycles = () => {
@@ -46,12 +53,27 @@ const Cycles = () => {
   const [questionTableData, setQuestionTableData] = useState(null);
   const [questions, setQuestions] = useState(null);
   const [isCanisterModalOpen, setIsCanisterModalOpen] = useState(false);
+  const [isLiquidifyUpdationModalOpen, setIsLiquidifyUpdationModalOpen] =
+    useState(false);
+  const [isOrdinalsUpdationModalOpen, setIsOrdinalsUpdationModalOpen] =
+    useState(false);
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
   const [isOrdinalsCollectionModalOpen, setIsOrdinalsCollectionModalOpen] =
     useState(false);
   const [approvedCollection, setApprovedCollection] = useState(null);
+  const [domainType, setDomainType] = useState("");
+  const [ordinalDomainType, setOrdinalDomainType] = useState("");
+
+  const [
+    approvedCollectionLiquidifyStaging,
+    setApprovedCollectionLiquidifyStaging,
+  ] = useState(null);
   const [approvedOrdinalCollection, setApprovedOrdinalCollection] =
     useState(null);
+  const [
+    approvedOrdinalCollectionStaging,
+    setApprovedOrdinalCollectionStaging,
+  ] = useState(null);
 
   const [data, setData] = useState({
     canisterName: "",
@@ -70,6 +92,20 @@ const Cycles = () => {
     yield: 0.0,
     canisterID: "",
     collectionName: "",
+  });
+
+  const [updationData, setUpdationData] = useState({
+    yield: "",
+    terms: "",
+    collectionId: "",
+    domain: "",
+  });
+
+  const [ordinalUpdationData, setordinalUpdationData] = useState({
+    yield: "",
+    terms: "",
+    collectionId: "",
+    domain: "",
   });
 
   const [ordinal, setOrdinalCol] = useState({
@@ -111,9 +147,11 @@ const Cycles = () => {
     }
   };
 
-  const handleDeleteCollection = async (id) => {
+  const handleDeleteCollection = async (id, power) => {
+    const canisterId =
+      power === PRODUCTION ? liquidifyCanisterId : liquidifyStagingCanisterId;
     try {
-      const API = await agentCreator(liquidifyIdlFactory, liquidifyCanisterId);
+      const API = await agentCreator(liquidifyIdlFactory, canisterId);
       const result = await API.removeApprovedCollections(id);
       if (result) {
         Notify("success", "Deleted collection successfully!");
@@ -126,21 +164,49 @@ const Cycles = () => {
     }
   };
 
-  const handleDeleteOrdinalCollection = async (id) => {
+  const handleDeleteOrdinalCollection = async (id, power) => {
+    const canisterId =
+      power === MYORDINALS ? myordinalsCanisterId : rootstockCanisterId;
     try {
-      const API = await agentCreator(
-        myordinalsIdlFactory,
-        myordinalsCanisterId
-      );
+      const API = await agentCreator(myordinalsIdlFactory, canisterId);
       const result = await API.removeApproved_Collections(id);
       if (result) {
         Notify("success", "Deleted collection successfully!");
-        fetchLiquidifyCollection();
+        fetchOrdinalCollection();
       } else {
         Notify("error", "Failed to delete!");
       }
     } catch (error) {
-      console.log("error", error);
+      console.log("ordinals collection delete error", error);
+    }
+  };
+
+  const handleUpdateLiquidify = async () => {
+    if (!updationData.terms || !updationData.yield || !domainType) {
+      Notify("warning", "Input all fields!");
+      return;
+    }
+    try {
+      const canisterId =
+        domainType === PRODUCTION
+          ? liquidifyCanisterId
+          : liquidifyStagingCanisterId;
+      setSubmitting(true);
+      const API = await agentCreator(liquidifyIdlFactory, canisterId);
+      const result = await API.removeApproved_Collections(
+        updationData.yield,
+        updationData.terms,
+        updationData.collectionId
+      );
+      if (result) {
+        Notify("success", "Updated collection successfully!");
+        fetchLiquidifyCollection();
+        handleLiquidifyUpdationModal();
+      } else {
+        Notify("error", "Failed to update!");
+      }
+    } catch (error) {
+      console.log("Liquidify collection updation error", error);
     }
   };
 
@@ -148,11 +214,31 @@ const Cycles = () => {
     setIsCanisterModalOpen(!isCanisterModalOpen);
   };
 
+  const handleLiquidifyUpdationModal = () => {
+    if (isLiquidifyUpdationModalOpen) {
+      setDomainType("");
+    }
+    setIsLiquidifyUpdationModalOpen(!isLiquidifyUpdationModalOpen);
+  };
+
+  const handleOrinalUpdationModal = () => {
+    if (isOrdinalsUpdationModalOpen) {
+      setDomainType("");
+    }
+    setIsOrdinalsUpdationModalOpen(!isOrdinalsUpdationModalOpen);
+  };
+
   const handleCollectionModal = () => {
+    if (isCollectionModalOpen) {
+      setDomainType("");
+    }
     setIsCollectionModalOpen(!isCollectionModalOpen);
   };
 
   const handleOrdinalsCollectionModal = () => {
+    if (isOrdinalsCollectionModalOpen) {
+      setOrdinalDomainType("");
+    }
     setIsOrdinalsCollectionModalOpen(!isOrdinalsCollectionModalOpen);
   };
 
@@ -235,6 +321,17 @@ const Cycles = () => {
 
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
+  };
+
+  const handleUpdationChange = (e) => {
+    setUpdationData({ ...updationData, [e.target.name]: e.target.value });
+  };
+
+  const handleOrdinalUpdationChange = (e) => {
+    setordinalUpdationData({
+      ...ordinalUpdationData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleOrdinalCollectionChange = (e) => {
@@ -462,7 +559,7 @@ const Cycles = () => {
     {
       title: (
         <Row justify={"center"} style={{ fontSize: 18 }}>
-          Yield | terms
+          Yield | Terms
         </Row>
       ),
       width: "20%",
@@ -476,25 +573,6 @@ const Cycles = () => {
           </Flex>
         </Row>
       ),
-    },
-    {
-      title: <Row justify={"center"} style={{ fontSize: 18 }}></Row>,
-      key: "delete",
-      dataIndex: "delete",
-      render: (_, obj) => {
-        return (
-          <Row justify={"center"}>
-            <Popconfirm
-              title={"Are you sure want to delete this canister?"}
-              onConfirm={() =>
-                handleDeleteOrdinalCollection(Number(obj.collectionID))
-              }
-            >
-              <Button>Delete</Button>
-            </Popconfirm>
-          </Row>
-        );
-      },
     },
   ];
 
@@ -568,7 +646,7 @@ const Cycles = () => {
     {
       title: (
         <Row justify={"center"} style={{ fontSize: 18 }}>
-          Yield | terms
+          Yield | Terms
         </Row>
       ),
       width: "20%",
@@ -583,28 +661,7 @@ const Cycles = () => {
         </Row>
       ),
     },
-    {
-      title: <Row justify={"center"} style={{ fontSize: 18 }}></Row>,
-      key: "delete",
-      dataIndex: "delete",
-      render: (_, obj) => {
-        return (
-          <Row justify={"center"}>
-            <Popconfirm
-              title={"Are you sure want to delete this canister?"}
-              onConfirm={() => handleDeleteCollection(Number(obj.collectionID))}
-            >
-              <Button>Delete</Button>
-            </Popconfirm>
-          </Row>
-        );
-      },
-    },
   ];
-
-  const onChange = (key) => {
-    // console.log(key);
-  };
 
   const handleAddCanister = async () => {
     try {
@@ -633,52 +690,82 @@ const Cycles = () => {
     }
   };
 
-  const handleAddOrdinalCollection = async () => {
-    if (
-      !Number(liquidify.terms) ||
-      !Number(liquidify.yield) ||
-      Number(liquidify.yield) > 0 ||
-      Number(liquidify.terms) > 0
-    ) {
-      Notify("warning", "Terms and Yield values should be valid number!");
-      return;
+  const handleAddOrdinalCollection = async (data, isCopy, copyDomainType) => {
+    let props = {};
+    if (!isCopy) {
+      if (
+        !Number(ordinal.terms) ||
+        !Number(ordinal.yield) ||
+        Number(ordinal.yield) > 0 ||
+        Number(ordinal.terms) > 0
+      ) {
+        Notify("warning", "Terms and Yield values should be valid number!");
+        return;
+      }
+      props = {
+        websiteLink: ordinal.websiteLink,
+        terms: Number(ordinal.terms),
+        thumbnailURI: ordinal.thumbnailURI,
+        contentType: ordinal.contentType,
+        collectionID: 1,
+        twitterLink: ordinal.twitterLink,
+        collectionURI: ordinal.collectionURI,
+        description: ordinal.description,
+        marketplaceLink: ordinal.marketplaceLink,
+        yield: Number(ordinal.yield),
+        collectionName: ordinal.collectionName,
+      };
+    } else {
+      props = {
+        websiteLink: data.websiteLink,
+        terms: Number(data.terms),
+        thumbnailURI: data.thumbnailURI,
+        contentType: data.contentType,
+        collectionID: 1,
+        twitterLink: data.twitterLink,
+        collectionURI: data.collectionURI,
+        description: data.description,
+        marketplaceLink: data.marketplaceLink,
+        yield: Number(data.yield),
+        collectionName: data.collectionName,
+      };
     }
     try {
+      let canisterId;
+      if (isCopy) {
+        canisterId =
+          copyDomainType === MYORDINALS
+            ? myordinalsCanisterId
+            : rootstockCanisterId;
+      } else {
+        canisterId =
+          ordinalDomainType === MYORDINALS
+            ? myordinalsCanisterId
+            : rootstockCanisterId;
+      }
       setSubmitting(true);
-      const API = await agentCreator(
-        myordinalsIdlFactory,
-        myordinalsCanisterId
-      );
-      const result = await API.addApproved_Collections({
-        websiteLink: liquidify.websiteLink,
-        terms: Number(liquidify.terms),
-        thumbnailURI: liquidify.thumbnailURI,
-        contentType: liquidify.contentType,
-        collectionID: 1,
-        twitterLink: liquidify.twitterLink,
-        collectionURI: liquidify.collectionURI,
-        description: liquidify.description,
-        marketplaceLink: liquidify.marketplaceLink,
-        yield: Number(liquidify.yield),
-        collectionName: liquidify.collectionName,
-      });
-
+      const API = await agentCreator(myordinalsIdlFactory, canisterId);
+      const result = await API.addApproved_Collections(props);
       if (result) {
         Notify("success", "Collection added successfully!");
-        setLiquidifyCol({
-          websiteLink: "",
-          terms: "",
-          thumbnailURI: "",
-          contentType: "",
-          twitterLink: "",
-          collectionURI: "",
-          description: "",
-          marketplaceLink: "",
-          yield: "",
-          canisterID: "",
-          collectionName: "",
-        });
-        handleCollectionModal();
+        if (!isCopy) {
+          setOrdinalCol({
+            websiteLink: "",
+            terms: "",
+            thumbnailURI: "",
+            contentType: "",
+            twitterLink: "",
+            collectionURI: "",
+            description: "",
+            marketplaceLink: "",
+            yield: "",
+            canisterID: "",
+            collectionName: "",
+          });
+          handleCollectionModal();
+        } else {
+          fetchOrdinalCollection();
+        }
       } else {
         Notify("error", "Failed to add collection!");
       }
@@ -689,20 +776,23 @@ const Cycles = () => {
     }
   };
 
-  const handleAddCollection = async () => {
-    if (
-      !Number(liquidify.terms) ||
-      !Number(liquidify.yield) ||
-      Number(liquidify.yield) > 0 ||
-      Number(liquidify.terms) > 0
-    ) {
-      Notify("warning", "Terms and Yield values should be valid number!");
-      return;
-    }
-    try {
-      setSubmitting(true);
-      const API = await agentCreator(liquidifyIdlFactory, liquidifyCanisterId);
-      const result = await API.addApprovedCollections({
+  const handleAddCollection = async (data, isCopy, copyDomainType) => {
+    let props = {};
+    if (!isCopy) {
+      if (
+        !Number(liquidify.terms) ||
+        !Number(liquidify.yield) ||
+        Number(liquidify.yield) > 0 ||
+        Number(liquidify.terms) > 0
+      ) {
+        Notify("warning", "Terms and Yield values should be valid number!");
+        return;
+      }
+      if (!domainType) {
+        Notify("warning", "Choose the domain type!");
+        return;
+      }
+      props = {
         websiteLink: liquidify.websiteLink,
         terms: Number(liquidify.terms),
         thumbnailURI: liquidify.thumbnailURI,
@@ -715,24 +805,60 @@ const Cycles = () => {
         yield: Number(liquidify.yield),
         canisterID: Principal.fromText(liquidify.canisterID),
         collectionName: liquidify.collectionName,
-      });
+      };
+    } else {
+      props = {
+        websiteLink: data.websiteLink,
+        terms: Number(data.terms),
+        thumbnailURI: data.thumbnailURI,
+        contentType: data.contentType,
+        collectionID: 1,
+        twitterLink: data.twitterLink,
+        collectionURI: data.collectionURI,
+        description: data.description,
+        marketplaceLink: data.marketplaceLink,
+        yield: Number(data.yield),
+        canisterID: data.canisterID,
+        collectionName: data.collectionName,
+      };
+    }
+    try {
+      setSubmitting(true);
+      let canisterId;
+      if (isCopy) {
+        canisterId =
+          copyDomainType === PRODUCTION
+            ? liquidifyCanisterId
+            : liquidifyStagingCanisterId;
+      } else {
+        canisterId =
+          domainType === PRODUCTION
+            ? liquidifyCanisterId
+            : liquidifyStagingCanisterId;
+      }
+      const API = await agentCreator(liquidifyIdlFactory, canisterId);
+      const result = await API.addApprovedCollections(props);
 
       if (result) {
         Notify("success", "Collection added successfully!");
-        setLiquidifyCol({
-          websiteLink: "",
-          terms: "",
-          thumbnailURI: "",
-          contentType: "",
-          twitterLink: "",
-          collectionURI: "",
-          description: "",
-          marketplaceLink: "",
-          yield: "",
-          canisterID: "",
-          collectionName: "",
-        });
-        handleCollectionModal();
+        if (!isCopy) {
+          setLiquidifyCol({
+            websiteLink: "",
+            terms: "",
+            thumbnailURI: "",
+            contentType: "",
+            twitterLink: "",
+            collectionURI: "",
+            description: "",
+            marketplaceLink: "",
+            yield: "",
+            canisterID: "",
+            collectionName: "",
+          });
+          handleCollectionModal();
+        } else {
+          fetchLiquidifyCollection();
+        }
       } else {
         Notify("error", "Failed to add collection!");
       }
@@ -742,10 +868,334 @@ const Cycles = () => {
       console.log("add col error", error);
     }
   };
+  console.log("updationData", updationData);
+  console.log("ordinalUpdationData", ordinalUpdationData);
+
+  const items_liquidify = [
+    {
+      key: "1",
+      label: "Production",
+      children: showTable ? (
+        <>
+          <Row justify={"end"}>
+            <Button
+              className="mt-2"
+              type="primary"
+              onClick={() => handleCollectionModal()}
+            >
+              Add collection
+            </Button>
+          </Row>
+          <Table
+            columns={[
+              ...liquidifyColumns,
+              {
+                title: <Row justify={"center"} style={{ fontSize: 18 }}></Row>,
+                key: "delete",
+                dataIndex: "delete",
+                render: (_, obj) => {
+                  return (
+                    <Row justify={"space-evenly"}>
+                      <Button
+                        onClick={() => {
+                          handleLiquidifyUpdationModal();
+                          setUpdationData({
+                            ...updationData,
+                            collectionId: Number(obj.collectionID),
+                            domain: "production",
+                          });
+                        }}
+                      >
+                        Update
+                      </Button>
+                      <Popconfirm
+                        title={
+                          "Are you sure want to copy this collection to staging?"
+                        }
+                        onConfirm={() =>
+                          handleAddCollection(obj, true, STAGING)
+                        }
+                      >
+                        <Button>Copy</Button>
+                      </Popconfirm>
+                      <Popconfirm
+                        title={"Are you sure want to delete this collection?"}
+                        onConfirm={() =>
+                          handleDeleteCollection(
+                            Number(obj.collectionID),
+                            STAGING
+                          )
+                        }
+                      >
+                        <Button>Delete</Button>
+                      </Popconfirm>
+                    </Row>
+                  );
+                },
+              },
+            ]}
+            className="mt-4"
+            loading={approvedCollection === null}
+            dataSource={approvedCollection === null ? [] : approvedCollection}
+            pagination={false}
+            rowKey={(e) => `${e.collectionName}-${e.contentType}`}
+          />
+        </>
+      ) : (
+        <Row justify={"center"}>
+          {" "}
+          <Text className="time-sub-text">You entered invalid token</Text>
+        </Row>
+      ),
+    },
+    {
+      key: "2",
+      label: "Staging",
+      children: showTable ? (
+        <>
+          <Row justify={"end"}>
+            <Button
+              className="mt-2"
+              type="primary"
+              onClick={() => handleCollectionModal()}
+            >
+              Add collection
+            </Button>
+          </Row>
+          <Table
+            columns={[
+              ...liquidifyColumns,
+              {
+                title: <Row justify={"center"} style={{ fontSize: 18 }}></Row>,
+                key: "delete",
+                dataIndex: "delete",
+                render: (_, obj) => {
+                  return (
+                    <Row justify={"space-evenly"}>
+                      <Button
+                        onClick={() => {
+                          handleLiquidifyUpdationModal();
+                          setUpdationData({
+                            ...updationData,
+                            collectionId: Number(obj.collectionID),
+                            domain: "staging",
+                          });
+                        }}
+                      >
+                        Update
+                      </Button>
+                      <Popconfirm
+                        title={
+                          "Are you sure want to copy this collection to production?"
+                        }
+                        onConfirm={() =>
+                          handleAddCollection(obj, true, PRODUCTION)
+                        }
+                      >
+                        <Button>Copy</Button>
+                      </Popconfirm>
+                      <Popconfirm
+                        title={"Are you sure want to delete this collection?"}
+                        onConfirm={() =>
+                          handleDeleteCollection(
+                            Number(obj.collectionID),
+                            STAGING
+                          )
+                        }
+                      >
+                        <Button>Delete</Button>
+                      </Popconfirm>
+                    </Row>
+                  );
+                },
+              },
+            ]}
+            className="mt-4"
+            loading={approvedCollectionLiquidifyStaging === null}
+            dataSource={
+              approvedCollectionLiquidifyStaging === null
+                ? []
+                : approvedCollectionLiquidifyStaging
+            }
+            pagination={false}
+            rowKey={(e) => `${e.collectionName}-${e.contentType}`}
+          />
+        </>
+      ) : (
+        <Row justify={"center"}>
+          {" "}
+          <Text className="time-sub-text">You entered invalid token</Text>
+        </Row>
+      ),
+    },
+  ];
+
+  const items_ordinals = [
+    {
+      key: "1_ordinals",
+      label: "My Ordinals",
+      children: showTable ? (
+        <>
+          <Row justify={"end"}>
+            <Button
+              className="mt-2"
+              type="primary"
+              onClick={() => handleOrdinalsCollectionModal()}
+            >
+              Add collection
+            </Button>
+          </Row>
+          <Table
+            columns={[
+              ...ordinalColumns,
+              {
+                title: <Row justify={"center"} style={{ fontSize: 18 }}></Row>,
+                key: "delete",
+                dataIndex: "delete",
+                render: (_, obj) => {
+                  return (
+                    <Row justify={"space-evenly"}>
+                      <Button
+                        onClick={() => {
+                          handleOrinalUpdationModal();
+                          setordinalUpdationData({
+                            ...updationData,
+                            collectionId: Number(obj.collectionID),
+                            domain: "myordinals",
+                          });
+                        }}
+                      >
+                        Update
+                      </Button>
+                      <Popconfirm
+                        title={
+                          "Are you sure want to copy this collection to rootstock?"
+                        }
+                        onConfirm={() =>
+                          handleAddOrdinalCollection(obj, true, ROOTSTOCK)
+                        }
+                      >
+                        <Button>Copy</Button>
+                      </Popconfirm>
+                      <Popconfirm
+                        title={"Are you sure want to delete this collection?"}
+                        onConfirm={() =>
+                          handleDeleteOrdinalCollection(
+                            Number(obj.collectionID),
+                            MYORDINALS
+                          )
+                        }
+                      >
+                        <Button>Delete</Button>
+                      </Popconfirm>
+                    </Row>
+                  );
+                },
+              },
+            ]}
+            className="mt-4"
+            loading={approvedOrdinalCollection === null}
+            dataSource={
+              approvedOrdinalCollection === null
+                ? []
+                : approvedOrdinalCollection
+            }
+            pagination={false}
+            rowKey={(e) => `${e.collectionName}-myordinal-${e.contentType}`}
+          />
+        </>
+      ) : (
+        <Row justify={"center"}>
+          {" "}
+          <Text className="time-sub-text">You entered invalid token</Text>
+        </Row>
+      ),
+    },
+    {
+      key: "2_ordinals",
+      label: "Rootstock",
+      children: showTable ? (
+        <>
+          <Row justify={"end"}>
+            <Button
+              className="mt-2"
+              type="primary"
+              onClick={() => handleOrdinalsCollectionModal()}
+            >
+              Add collection
+            </Button>
+          </Row>
+          <Table
+            columns={[
+              ...ordinalColumns,
+              {
+                title: <Row justify={"center"} style={{ fontSize: 18 }}></Row>,
+                key: "delete",
+                dataIndex: "delete",
+                render: (_, obj) => {
+                  return (
+                    <Row justify={"space-evenly"}>
+                      <Button
+                        onClick={() => {
+                          handleOrinalUpdationModal();
+                          setordinalUpdationData({
+                            ...updationData,
+                            collectionId: Number(obj.collectionID),
+                            domain: "rootstock",
+                          });
+                        }}
+                      >
+                        Update
+                      </Button>
+                      <Popconfirm
+                        title={
+                          "Are you sure want to copy this collection to myordinals?"
+                        }
+                        onConfirm={() =>
+                          handleAddOrdinalCollection(obj, true, MYORDINALS)
+                        }
+                      >
+                        <Button>Copy</Button>
+                      </Popconfirm>
+                      <Popconfirm
+                        title={"Are you sure want to delete this collection?"}
+                        onConfirm={() =>
+                          handleDeleteOrdinalCollection(
+                            Number(obj.collectionID),
+                            ROOTSTOCK
+                          )
+                        }
+                      >
+                        <Button>Delete</Button>
+                      </Popconfirm>
+                    </Row>
+                  );
+                },
+              },
+            ]}
+            className="mt-4"
+            loading={approvedOrdinalCollectionStaging === null}
+            dataSource={
+              approvedOrdinalCollectionStaging === null
+                ? []
+                : approvedOrdinalCollectionStaging
+            }
+            pagination={false}
+            rowKey={(e) => `${e.collectionName}-rootstock-${e.contentType}`}
+          />
+        </>
+      ) : (
+        <Row justify={"center"}>
+          {" "}
+          <Text className="time-sub-text">You entered invalid token</Text>
+        </Row>
+      ),
+    },
+  ];
 
   const items = [
     {
-      key: "1",
+      key: "1_liquidify",
       label: "Canister cycles",
       children: showTable ? (
         <>
@@ -775,27 +1225,11 @@ const Cycles = () => {
       ),
     },
     {
-      key: "2",
+      key: "2_liquidify",
       label: "Liquidify collections",
       children: showTable ? (
         <>
-          <Row justify={"end"}>
-            <Button
-              className="mt-2"
-              type="primary"
-              onClick={() => handleCollectionModal()}
-            >
-              Add collection
-            </Button>
-          </Row>
-          <Table
-            columns={liquidifyColumns}
-            className="mt-4"
-            loading={approvedCollection === null}
-            dataSource={approvedCollection === null ? [] : approvedCollection}
-            pagination={false}
-            rowKey={(e) => `${e.collectionName}-${e.contentType}`}
-          />
+          <Tabs centered items={items_liquidify} />
         </>
       ) : (
         <Row justify={"center"}>
@@ -808,29 +1242,7 @@ const Cycles = () => {
       key: "3",
       label: "Ordinals collections",
       children: showTable ? (
-        <>
-          <Row justify={"end"}>
-            <Button
-              className="mt-2"
-              type="primary"
-              onClick={() => handleOrdinalsCollectionModal()}
-            >
-              Add collection
-            </Button>
-          </Row>
-          <Table
-            columns={ordinalColumns}
-            className="mt-4"
-            loading={approvedOrdinalCollection === null}
-            dataSource={
-              approvedOrdinalCollection === null
-                ? []
-                : approvedOrdinalCollection
-            }
-            pagination={false}
-            rowKey={(e) => `${e.collectionName}-${e.contentType}`}
-          />
-        </>
+        <Tabs centered items={items_ordinals} />
       ) : (
         <Row justify={"center"}>
           {" "}
@@ -868,6 +1280,28 @@ const Cycles = () => {
           <Text className="time-sub-text">You entered invalid token</Text>
         </Row>
       ),
+    },
+  ];
+
+  const optionsRadio = [
+    {
+      label: "Production",
+      value: "production",
+    },
+    {
+      label: "Staging",
+      value: "staging",
+    },
+  ];
+
+  const ordinalOptionsRadio = [
+    {
+      label: "Myordinals",
+      value: "myordinals",
+    },
+    {
+      label: "Rootstock",
+      value: "rootstock",
     },
   ];
 
@@ -916,16 +1350,19 @@ const Cycles = () => {
   const fetchLiquidifyCollection = async () => {
     try {
       const API = await agentCreator(liquidifyIdlFactory, liquidifyCanisterId);
+      const API_staging = await agentCreator(
+        liquidifyIdlFactory,
+        liquidifyStagingCanisterId
+      );
       const approvedCollections = await API.getApprovedCollections();
+      const approvedCollections_staging =
+        await API_staging.getApprovedCollections();
       const collections = approvedCollections.map((data) => data[1]);
-      let obj = {};
-      approvedCollections.forEach((col) => {
-        obj = {
-          ...obj,
-          [Number(col[0])]: col[1],
-        };
-      });
+      const collections_staging = approvedCollections_staging.map(
+        (data) => data[1]
+      );
       setApprovedCollection(collections);
+      setApprovedCollectionLiquidifyStaging(collections_staging);
     } catch (error) {
       console.log("error Fetch User Assets", error);
     }
@@ -937,16 +1374,19 @@ const Cycles = () => {
         myordinalsIdlFactory,
         myordinalsCanisterId
       );
+      const API_staging = await agentCreator(
+        myordinalsIdlFactory,
+        rootstockCanisterId
+      );
       const approvedCollections = await API.getApproved_Collections();
+      const approvedCollections_staging =
+        await API_staging.getApproved_Collections();
       const collections = approvedCollections.map((data) => data[1]);
-      let obj = {};
-      approvedCollections.forEach((col) => {
-        obj = {
-          ...obj,
-          [Number(col[0])]: col[1],
-        };
-      });
+      const collections_staging = approvedCollections_staging.map(
+        (data) => data[1]
+      );
       setApprovedOrdinalCollection(collections);
+      setApprovedOrdinalCollectionStaging(collections_staging);
     } catch (error) {
       console.log("error Fetch User Assets", error);
     }
@@ -1015,11 +1455,12 @@ const Cycles = () => {
     <>
       <Row justify={"center"} align={"middle"} className="login mb-4">
         <Col md={24}>
-          <Tabs centered items={items} onChange={onChange} />
+          <Tabs centered items={items} />
           {/* Canister cycles */}
         </Col>
       </Row>
 
+      {/* Authentication */}
       <Modal className="mt-60" open={isModalOpen} footer={null}>
         <Text className="color-black row justify-content-center font-size-20">
           Authentication Token
@@ -1038,6 +1479,8 @@ const Cycles = () => {
           </button>
         </Flex>
       </Modal>
+
+      {/* Canister adding in cycles */}
       <Modal
         className="mt-60"
         title="Add Canister"
@@ -1281,11 +1724,23 @@ const Cycles = () => {
                   />
                 </div>
 
+                <div className="mt-4">
+                  <div className="form-label">Choose domain type</div>
+                  <Radio.Group
+                    size="large"
+                    options={optionsRadio}
+                    value={domainType}
+                    onChange={({ target: { value } }) => setDomainType(value)}
+                    optionType="button"
+                    buttonStyle="solid"
+                  />
+                </div>
+
                 <Button
                   type="primary"
                   htmlType="submit"
                   loading={isSubmitting}
-                  className="mt-5"
+                  className="mt-4"
                 >
                   Submit
                 </Button>
@@ -1293,6 +1748,134 @@ const Cycles = () => {
             </div>
           </Col>
         </Row>
+      </Modal>
+
+      {/* Liquidify yield and terms updation */}
+      <Modal
+        className="mt-60"
+        title="Update liquidify"
+        open={isLiquidifyUpdationModalOpen}
+        onCancel={() => handleLiquidifyUpdationModal()}
+        footer={null}
+      >
+        <>
+          <Row align={"middle"} justify={"space-between"} className="mt-30">
+            <Col xs={24}>
+              <div>
+                <input
+                  value={updationData.yield}
+                  className="input col-md-12 col-sm-12"
+                  name="yield"
+                  onChange={handleUpdationChange}
+                  placeholder="Enter yield"
+                />
+              </div>
+            </Col>
+          </Row>
+          <Row className="mt-30">
+            <Col xs={24}>
+              <div>
+                <input
+                  value={updationData.terms}
+                  className="input col-md-12 col-sm-12"
+                  name="terms"
+                  onChange={(e) => {
+                    handleUpdationChange(e);
+                  }}
+                  placeholder="Enter terms"
+                />
+              </div>
+            </Col>
+          </Row>
+          <Row className="mt-4">
+            <div>
+              <div className="form-label">Choose domain type</div>
+              <Radio.Group
+                size="large"
+                options={optionsRadio}
+                value={updationData.domain}
+                optionType="button"
+                buttonStyle="solid"
+              />
+            </div>
+          </Row>
+          <Row className="mt-30">
+            <Col xs={24}>
+              <Button
+                block
+                type="primary"
+                loading={isSubmitting}
+                onClick={handleUpdateLiquidify}
+              >
+                Update
+              </Button>
+            </Col>
+          </Row>
+        </>
+      </Modal>
+
+      {/* Ordinals yield and terms updation */}
+      <Modal
+        className="mt-60"
+        title="Update ordinals"
+        open={isOrdinalsUpdationModalOpen}
+        onCancel={() => handleOrinalUpdationModal()}
+        footer={null}
+      >
+        <>
+          <Row align={"middle"} justify={"space-between"} className="mt-30">
+            <Col xs={24}>
+              <div>
+                <input
+                  value={ordinalUpdationData.yield}
+                  className="input col-md-12 col-sm-12"
+                  name="yield"
+                  onChange={handleOrdinalUpdationChange}
+                  placeholder="Enter yield"
+                />
+              </div>
+            </Col>
+          </Row>
+          <Row className="mt-30">
+            <Col xs={24}>
+              <div>
+                <input
+                  value={ordinalUpdationData.terms}
+                  className="input col-md-12 col-sm-12"
+                  name="terms"
+                  onChange={(e) => {
+                    handleOrdinalUpdationChange(e);
+                  }}
+                  placeholder="Enter terms"
+                />
+              </div>
+            </Col>
+          </Row>
+          <Row className="mt-4">
+            <div>
+              <div className="form-label">Choose domain type</div>
+              <Radio.Group
+                size="large"
+                options={ordinalOptionsRadio}
+                value={ordinalUpdationData.domain}
+                optionType="button"
+                buttonStyle="solid"
+              />
+            </div>
+          </Row>
+          <Row className="mt-30">
+            <Col xs={24}>
+              <Button
+                block
+                type="primary"
+                loading={isSubmitting}
+                onClick={handleUpdateLiquidify}
+              >
+                Update
+              </Button>
+            </Col>
+          </Row>
+        </>
       </Modal>
 
       {/* Ordinals collection */}
@@ -1455,6 +2038,20 @@ const Cycles = () => {
                     onChange={handleOrdinalCollectionChange}
                     placeholder="Enter official twitter link of the canister!"
                     required
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <div className="form-label">Choose site</div>
+                  <Radio.Group
+                    size="large"
+                    options={ordinalOptionsRadio}
+                    value={ordinalDomainType}
+                    onChange={({ target: { value } }) =>
+                      setOrdinalDomainType(value)
+                    }
+                    optionType="button"
+                    buttonStyle="solid"
                   />
                 </div>
 
