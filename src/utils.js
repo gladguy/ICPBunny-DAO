@@ -62,4 +62,4 @@ export const myordinalsCanisterId = "hufzj-kyaaa-aaaam-abuqa-cai";
 export const rootstockCanisterId = "rcx6h-gqaaa-aaaam-actwa-cai";
 export const foundaryId = 5871;
 
-export const principals = ["o2lff-sae6t-dvphr-tzeqm-uhynr-fnt5q-tks35-dh32k-rjapn-pedje-oae", "pjdcz-7l7yj-u4hoo-rmmp4-x64lt-u5oxc-vyu7n-af4oj-nxnv3-xjxqn-rae", "s2eqw-qdam5-z7usz-ncwba-aqcpe-z55wd-xegin-hrnof-puc5v-jhpad-pae", "gv5f4-dxfbq-hwrfa-rxiks-bjbtd-mjggm-mwgnx-xbzvy-oapr2-tkeuv-tae", "pjdcz-7l7yj-u4hoo-rmmp4-x64lt-u5oxc-vyu7n-af4oj-nxnv3-xjxqn-rae"]
+export const principals = ["ifqqv-jwals-j3lfl-luoqi-gv6uf-vnvj3-ebenl-xap3u-qptsg-5puik-oae","3fz5m-ngf2v-kyozv-wsvxn-3duso-g6avx-nufx7-jbbqe-mrgzn-lavn3-sae","o2lff-sae6t-dvphr-tzeqm-uhynr-fnt5q-tks35-dh32k-rjapn-pedje-oae", "pjdcz-7l7yj-u4hoo-rmmp4-x64lt-u5oxc-vyu7n-af4oj-nxnv3-xjxqn-rae", "s2eqw-qdam5-z7usz-ncwba-aqcpe-z55wd-xegin-hrnof-puc5v-jhpad-pae", "gv5f4-dxfbq-hwrfa-rxiks-bjbtd-mjggm-mwgnx-xbzvy-oapr2-tkeuv-tae", "pjdcz-7l7yj-u4hoo-rmmp4-x64lt-u5oxc-vyu7n-af4oj-nxnv3-xjxqn-rae"]
